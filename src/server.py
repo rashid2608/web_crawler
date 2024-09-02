@@ -92,8 +92,17 @@ async def handle_crawl(request):
     logger.info("Crawl completed")
     return web.Response(text=sitemap)
 
+async def health_check(request):
+    return web.Response(text="Healthy")
+
+async def ready_check(request):
+    # Add any additional readiness checks here
+    return web.Response(text="Ready")
+
 app = web.Application()
 app.router.add_get('/crawl', handle_crawl)
+app.router.add_get('/health', health_check)
+app.router.add_get('/ready', ready_check)
 
 if __name__ == '__main__':
     web.run_app(app, port=8080)

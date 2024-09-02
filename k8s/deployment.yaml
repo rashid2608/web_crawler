@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-crawler
+spec:
+  replicas: 1  # You can increase this as needed
+  selector:
+    matchLabels:
+      app: web-crawler
+  template:
+    metadata:
+      labels:
+        app: web-crawler
+    spec:
+      containers:
+      - name: web-crawler
+        image: web-crawler:latest
+        imagePullPolicy: Never  # This tells Kubernetes to use the local image
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          periodSeconds: 5
+        env:
+        - name: MAX_CONCURRENT_CRAWLS
+          valueFrom:
+            configMapKeyRef:
+              name: web-crawler-config
+              key: max_concurrent_crawls

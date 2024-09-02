@@ -24,7 +24,7 @@ This project implements a simple web crawler service with a server and client co
    cd web-crawler
    ```
 
-2. Create and activate a virtual environment (optional but recommended):
+2. Create and activate a virtual environment:
    ```
    python -m venv venv
    source venv/bin/activate  # On Windows, use: venv\Scripts\activate
@@ -74,18 +74,112 @@ python -m unittest discover tests -v
 
 ```
 web_crawler/
-├── server.py
-├── client.py
-├── requirements.txt
-├── README.md
-└── tests/
-    └── test_crawler.py
+│
+├── src/
+│   ├── server.py
+│   ├── client.py
+│   └── requirements.txt
+│
+├── tests/
+│   └── test_crawler.py
+│
+├── k8s/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── configmap.yaml
+│   └── hpa.yaml
+│
+├── Dockerfile
+└── README.md
 ```
 
 - `server.py`: Contains the server-side logic, including the Crawler class and request handling.
 - `client.py`: Implements the client-side logic for sending crawl requests and displaying results.
 - `requirements.txt`: Lists all Python dependencies for the project.
 - `tests/test_crawler.py`: Contains unit tests for the crawler functionality.
+
+
+#Deploying with Minikube
+
+Start Minikube:
+Copyminikube start
+
+Enable the ingress addon (optional):
+Copyminikube addons enable ingress
+
+Set your terminal to use Minikube's Docker daemon:
+Copyeval $(minikube docker-env)  # For Unix-based systems
+# OR
+minikube docker-env | Invoke-Expression  # For Windows PowerShell
+
+Build your Docker image:
+Copydocker build -t web-crawler:latest .
+
+Apply the Kubernetes configurations:
+Copykubectl apply -f k8s/
+
+Verify the deployment:
+Copykubectl get deployments
+kubectl get pods
+kubectl get services
+
+Access the service:
+Copyminikube service web-crawler
+
+(Optional) For debugging, use the Minikube dashboard:
+Copyminikube dashboard
+
+
+Troubleshooting
+HorizontalPodAutoscaler Issues
+If you encounter an error related to the HorizontalPodAutoscaler when applying the Kubernetes configurations, try the following:
+
+Check your Kubernetes version:
+Copykubectl version --short
+
+Update the k8s/hpa.yaml file to use a compatible API version:
+
+For Kubernetes 1.23+: Use apiVersion: autoscaling/v2
+For Kubernetes 1.18-1.22: Use apiVersion: autoscaling/v2beta2
+For older versions: Use apiVersion: autoscaling/v1
+
+
+Ensure the metrics server is enabled in Minikube:
+Copyminikube addons enable metrics-server
+
+If issues persist, you can temporarily skip applying the HPA:
+Copykubectl apply -f k8s/configmap.yaml -f k8s/deployment.yaml -f k8s/service.yaml
+
+
+Other Common Issues
+
+If pods are not starting, check their status and logs:
+Copykubectl get pods
+kubectl describe pod <pod-name>
+kubectl logs <pod-name>
+
+Ensure your Dockerfile is correctly set up and the application runs properly as a container.
+Verify that your service is correctly configured to expose the application.
+
+Stopping and Cleaning Up
+When you're done testing:
+
+Delete the Kubernetes resources:
+Copykubectl delete -f k8s/
+
+Stop Minikube:
+Copyminikube stop
+
+To completely remove the Minikube cluster:
+Copyminikube delete
+
+
+Running Tests
+To run the unit tests:
+Copypython -m unittest discover tests
+For verbose output:
+Copypython -m unittest discover tests -v
+
 
 ## Design Decisions and Trade-offs
 
@@ -106,11 +200,3 @@ web_crawler/
 3. The crawler doesn't handle JavaScript-rendered content.
 4. No persistent storage of crawl results.
 5. The client-server communication could be improved for real-time updates.
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
