@@ -1,6 +1,6 @@
 # Web Crawler
 
-This project implements a simple web crawler service with a server and client component. The server receives requests from a client to crawl a URL and sends the sitemap back to the client. The crawler is limited to one domain and builds a sitemap showing the links between pages.
+This project implements a simple web crawler service with server and client components. The server receives requests from a client to crawl a URL and sends the sitemap back to the client. The crawler is limited to one domain and builds a sitemap showing the links between pages.
 
 ## Features
 
@@ -15,6 +15,34 @@ This project implements a simple web crawler service with a server and client co
 - Python 3.7+
 - aiohttp
 - beautifulsoup4
+
+## Project Structure
+
+```
+web_crawler/
+│
+├── src/
+│   ├── server.py
+│   ├── client.py
+│   └── requirements.txt
+│
+├── tests/
+│   └── test_crawler.py
+│
+├── k8s/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── configmap.yaml
+│   └── hpa.yaml
+│
+├── Dockerfile
+└── README.md
+```
+
+- `server.py`: Contains the server-side logic, including the Crawler class and request handling.
+- `client.py`: Implements the client-side logic for sending crawl requests and displaying results.
+- `requirements.txt`: Lists all Python dependencies for the project.
+- `tests/test_crawler.py`: Contains unit tests for the crawler functionality.
 
 ## Installation
 
@@ -70,127 +98,115 @@ For more detailed test output, use the verbose flag:
 python -m unittest discover tests -v
 ```
 
-## Project Structure
+## Deploying with Minikube
 
-```
-web_crawler/
-│
-├── src/
-│   ├── server.py
-│   ├── client.py
-│   └── requirements.txt
-│
-├── tests/
-│   └── test_crawler.py
-│
-├── k8s/
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   ├── configmap.yaml
-│   └── hpa.yaml
-│
-├── Dockerfile
-└── README.md
-```
+1. Start Minikube:
+   ```
+   minikube start
+   ```
 
-- `server.py`: Contains the server-side logic, including the Crawler class and request handling.
-- `client.py`: Implements the client-side logic for sending crawl requests and displaying results.
-- `requirements.txt`: Lists all Python dependencies for the project.
-- `tests/test_crawler.py`: Contains unit tests for the crawler functionality.
+2. Enable the ingress addon (optional):
+   ```
+   minikube addons enable ingress
+   ```
 
+3. Set your terminal to use Minikube's Docker daemon:
+   ```
+   eval $(minikube docker-env)  # For Unix-based systems
+   # OR
+   minikube docker-env | Invoke-Expression  # For Windows PowerShell
+   ```
 
-#Deploying with Minikube
+4. Build your Docker image:
+   ```
+   docker build -t web-crawler:latest .
+   ```
 
-Start Minikube:
-Copyminikube start
+5. Apply the Kubernetes configurations:
+   ```
+   kubectl apply -f k8s/
+   ```
 
-Enable the ingress addon (optional):
-Copyminikube addons enable ingress
+6. Verify the deployment:
+   ```
+   kubectl get deployments
+   kubectl get pods
+   kubectl get services
+   ```
 
-Set your terminal to use Minikube's Docker daemon:
-Copyeval $(minikube docker-env)  # For Unix-based systems
-# OR
-minikube docker-env | Invoke-Expression  # For Windows PowerShell
+7. Access the service:
+   ```
+   minikube service web-crawler
+   ```
 
-Build your Docker image:
-Copydocker build -t web-crawler:latest .
+8. (Optional) For debugging, use the Minikube dashboard:
+   ```
+   minikube dashboard
+   ```
 
-Apply the Kubernetes configurations:
-Copykubectl apply -f k8s/
+## Troubleshooting
 
-Verify the deployment:
-Copykubectl get deployments
-kubectl get pods
-kubectl get services
+### HorizontalPodAutoscaler Issues
 
-Access the service:
-Copyminikube service web-crawler
-
-(Optional) For debugging, use the Minikube dashboard:
-Copyminikube dashboard
-
-
-Troubleshooting
-HorizontalPodAutoscaler Issues
 If you encounter an error related to the HorizontalPodAutoscaler when applying the Kubernetes configurations, try the following:
 
-Check your Kubernetes version:
-Copykubectl version --short
+1. Check your Kubernetes version:
+   ```
+   kubectl version --short
+   ```
 
-Update the k8s/hpa.yaml file to use a compatible API version:
+2. Update the `k8s/hpa.yaml` file to use a compatible API version:
+   - For Kubernetes 1.23+: Use `apiVersion: autoscaling/v2`
+   - For Kubernetes 1.18-1.22: Use `apiVersion: autoscaling/v2beta2`
+   - For older versions: Use `apiVersion: autoscaling/v1`
 
-For Kubernetes 1.23+: Use apiVersion: autoscaling/v2
-For Kubernetes 1.18-1.22: Use apiVersion: autoscaling/v2beta2
-For older versions: Use apiVersion: autoscaling/v1
+3. Ensure the metrics server is enabled in Minikube:
+   ```
+   minikube addons enable metrics-server
+   ```
 
+4. If issues persist, you can temporarily skip applying the HPA:
+   ```
+   kubectl apply -f k8s/configmap.yaml -f k8s/deployment.yaml -f k8s/service.yaml
+   ```
 
-Ensure the metrics server is enabled in Minikube:
-Copyminikube addons enable metrics-server
+### Other Common Issues
 
-If issues persist, you can temporarily skip applying the HPA:
-Copykubectl apply -f k8s/configmap.yaml -f k8s/deployment.yaml -f k8s/service.yaml
+- If pods are not starting, check their status and logs:
+  ```
+  kubectl get pods
+  kubectl describe pod <pod-name>
+  kubectl logs <pod-name>
+  ```
 
+- Ensure your Dockerfile is correctly set up and the application runs properly as a container.
+- Verify that your service is correctly configured to expose the application.
 
-Other Common Issues
+## Stopping and Cleaning Up
 
-If pods are not starting, check their status and logs:
-Copykubectl get pods
-kubectl describe pod <pod-name>
-kubectl logs <pod-name>
-
-Ensure your Dockerfile is correctly set up and the application runs properly as a container.
-Verify that your service is correctly configured to expose the application.
-
-Stopping and Cleaning Up
 When you're done testing:
 
-Delete the Kubernetes resources:
-Copykubectl delete -f k8s/
+1. Delete the Kubernetes resources:
+   ```
+   kubectl delete -f k8s/
+   ```
 
-Stop Minikube:
-Copyminikube stop
+2. Stop Minikube:
+   ```
+   minikube stop
+   ```
 
-To completely remove the Minikube cluster:
-Copyminikube delete
-
-
-Running Tests
-To run the unit tests:
-Copypython -m unittest discover tests
-For verbose output:
-Copypython -m unittest discover tests -v
-
+3. To completely remove the Minikube cluster:
+   ```
+   minikube delete
+   ```
 
 ## Design Decisions and Trade-offs
 
 1. Asynchronous Programming: We used Python's asyncio and aiohttp for asynchronous crawling, allowing for concurrent requests and improved performance.
-
 2. Domain Limitation: The crawler is restricted to a single domain to prevent unintended crawling of external sites.
-
 3. Error Handling: Basic error handling and a retry mechanism are implemented to improve resilience.
-
 4. In-Memory Storage: The sitemap is stored in memory, which is fast but could be a limitation for extremely large sites.
-
 5. Simple Tree-like Output: The sitemap is presented in a simple tree-like text format for easy readability.
 
 ## Limitations and Potential Improvements
